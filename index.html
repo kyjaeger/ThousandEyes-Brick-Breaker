@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThousandEyes: Network Breaker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        #gameContainer {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        #gameCanvas {
+            border: 3px solid #00d9ff;
+            background: linear-gradient(180deg, #000814 0%, #001524 100%);
+            box-shadow: 
+                0 0 40px rgba(0, 217, 255, 0.4),
+                inset 0 0 100px rgba(0, 217, 255, 0.05);
+            border-radius: 10px;
+            max-width: 100%;
+        }
+
+        #gameInfo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(138, 43, 226, 0.15) 100%);
+            border-radius: 8px;
+            border: 2px solid #00d9ff;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.2);
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4);
+        }
+
+        .stat-label {
+            color: #00d9ff;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+        }
+
+        #gameOver, #startScreen, #levelComplete {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.98) 0%, rgba(10, 14, 39, 0.98) 100%);
+            padding: 50px;
+            border-radius: 20px;
+            border: 3px solid #00d9ff;
+            box-shadow: 0 0 60px rgba(0, 217, 255, 0.5);
+            text-align: center;
+            display: none;
+            z-index: 100;
+            min-width: 400px;
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #00d9ff 0%, #8a2be2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            font-size: 42px;
+            font-weight: 900;
+            text-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            color: #00d9ff;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d9ff 0%, #0099ff 100%);
+            color: #000814;
+            border: none;
+            padding: 16px 40px;
+            font-size: 18px;
+            font-weight: 900;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(0, 217, 255, 0.4);
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #00fff7 0%, #00d9ff 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 217, 255, 0.6);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+        }
+
+        .instructions {
+            margin: 25px 0;
+            line-height: 2;
+            color: #a0d2eb;
+            font-size: 15px;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .problem-item {
+            background: rgba(0, 217, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #00d9ff;
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        #comboDisplay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 48px;
+            font-weight: 900;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.8);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .pulse {
+            animation: pulse 0.5s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+        }
+
+        .te-logo {
+            font-size: 64px;
+            filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.6));
+        }
+
+        /* Marketing Banner */
+        #marketingBanner {
+            width: 100%;
+            background: linear-gradient(90deg, rgba(0, 217, 255, 0.2) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(0, 217, 255, 0.2) 100%);
+            border: 2px solid rgba(0, 217, 255, 0.5);
+            border-radius: 8px;
+            padding: 12px 0;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .banner-content {
+            display: flex;
+            animation: scroll 30s linear infinite;
+            white-space: nowrap;
+        }
+
+        .banner-item {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 40px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d9ff;
+            letter-spacing: 0.5px;
+        }
+
+        .banner-item::before {
+            content: '👁️';
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        .banner-item::after {
+            content: '•';
+            margin-left: 40px;
+            color: rgba(0, 217, 255, 0.5);
+        }
+
+        @keyframes scroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        /* User Complaint Popups */
+        .complaint-popup {
+            position: absolute;
+            pointer-events: none;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 
+                2px 2px 4px rgba(0, 0, 0, 0.8),
+                0 0 10px rgba(255, 107, 107, 0.6);
+            animation: floatUp 2s ease-out forwards;
+            z-index: 50;
+            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid #ff6b6b;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.8);
+            }
+            20% {
+                transform: translateY(-20px) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-80px) scale(0.9);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Marketing Banner -->
+        <div id="marketingBanner">
+            <div class="banner-content">
+                <span class="banner-item">Mobile Endpoint Agents - Monitor from anywhere</span>
+                <span class="banner-item">Internet Insights - See beyond your network</span>
+                <span class="banner-item">Cloud & SaaS Monitoring - Azure, AWS, Google Cloud</span>
+                <span class="banner-item">API Monitoring - Validate every endpoint</span>
+                <span class="banner-item">AI-Powered Analysis - Instant root cause detection</span>
+                <span class="banner-item">DNS Protection - Stay ahead of DNS issues</span>
+                <span class="banner-item">Path Visualization - See every hop in real-time</span>
+                <span class="banner-item">Browser Synthetics - Test like real users</span>
+                <span class="banner-item">Traffic Insights - Understand your network flows</span>
+                <span class="banner-item">BGP Monitoring - Detect routing anomalies</span>
+                <!-- Duplicate for seamless loop -->
+                <span class="banner-item">Mobile Endpoint Agents - Monitor from anywhere</span>
+                <span class="banner-item">Internet Insights - See beyond your network</span>
+                <span class="banner-item">Cloud & SaaS Monitoring - Azure, AWS, Google Cloud</span>
+                <span class="banner-item">API Monitoring - Validate every endpoint</span>
+                <span class="banner-item">AI-Powered Analysis - Instant root cause detection</span>
+                <span class="banner-item">DNS Protection - Stay ahead of DNS issues</span>
+                <span class="banner-item">Path Visualization - See every hop in real-time</span>
+                <span class="banner-item">Browser Synthetics - Test like real users</span>
+                <span class="banner-item">Traffic Insights - Understand your network flows</span>
+                <span class="banner-item">BGP Monitoring - Detect routing anomalies</span>
+            </div>
+        </div>
+
+        <div id="startScreen">
+            <div class="logo-container">
+                <div class="te-logo">👁️</div>
+            </div>
+            <h1>ThousandEyes: Network Breaker</h1>
+            <p class="subtitle">Break Through Network Chaos</p>
+            <p class="instructions">
+                <strong>Your Mission:</strong><br>
+                Break through the barrage of network problems!<br><br>
+                <strong>Controls:</strong><br>
+                ← → Arrow Keys to Move Paddle<br>
+                SPACEBAR to Launch Ball<br><br>
+                <strong>The Problems You'll Face:</strong>
+            </p>
+            <div class="problem-grid">
+                <div class="problem-item">🐌 My VPN is slow</div>
+                <div class="problem-item">📧 Microsoft won't load</div>
+                <div class="problem-item">⚠️ ISP Outage</div>
+                <div class="problem-item">🔒 SSL Cert Expiry</div>
+                <div class="problem-item">🌐 DNS Failure</div>
+                <div class="problem-item">📊 High Latency</div>
+                <div class="problem-item">📉 Packet Loss</div>
+                <div class="problem-item">☁️ Cloud Slowdown</div>
+            </div>
+            <p class="instructions">
+                ThousandEyes sees all, solves all! 💪
+            </p>
+            <button onclick="startGame()">Start Monitoring</button>
+        </div>
+
+        <div id="levelComplete">
+            <div class="te-logo">🎯</div>
+            <h1>Level Complete!</h1>
+            <p id="levelStats" class="instructions"></p>
+            <button onclick="nextLevel()">Next Challenge</button>
+        </div>
+
+        <div id="gameOver">
+            <div class="te-logo">👁️</div>
+            <h1>Network Secured!</h1>
+            <p id="finalScore" class="instructions"></p>
+            <p class="instructions">Outstanding work! You've cleared the network chaos! 🎉</p>
+            <button onclick="restartGame()">Monitor Again</button>
+        </div>
+
+        <div id="gameInfo">
+            <div class="stat-box">
+                <div class="stat-label">Score</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Level</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Lives</div>
+                <div class="stat-value" id="lives">❤️❤️❤️</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Combo</div>
+                <div class="stat-value" id="combo">0x</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="900" height="700"></canvas>
+        <div id="comboDisplay"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let gameActive = false;
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let combo = 0;
+        let maxCombo = 0;
+        let keys = {};
+        let paddle, ball, bricks, particles, powerUps;
+        let ballLaunched = false;
+
+        // Network problems that engineers face
+        const networkProblems = [
+            { text: 'My VPN is slow', color: '#ff6b6b', emoji: '🐌', points: 100 },
+            { text: 'Microsoft won\'t load', color: '#4ecdc4', emoji: '📧', points: 150 },
+            { text: 'ISP Outage', color: '#e74c3c', emoji: '⚠️', points: 200 },
+            { text: 'SSL Cert Expiry', color: '#f39c12', emoji: '🔒', points: 180 },
+            { text: 'DNS Failure', color: '#9b59b6', emoji: '🌐', points: 160 },
+            { text: 'High Latency', color: '#e67e22', emoji: '📊', points: 140 },
+            { text: 'Packet Loss', color: '#1abc9c', emoji: '📉', points: 170 },
+            { text: 'Cloud Slowdown', color: '#3498db', emoji: '☁️', points: 190 },
+            { text: 'CDN Issues', color: '#e91e63', emoji: '🌍', points: 130 },
+            { text: 'BGP Flapping', color: '#ff5722', emoji: '🔄', points: 220 },
+            { text: 'Firewall Blocking', color: '#795548', emoji: '🚫', points: 150 },
+            { text: 'API Timeout', color: '#607d8b', emoji: '⏱️', points: 140 },
+            { text: 'Database Lag', color: '#8bc34a', emoji: '🗄️', points: 160 },
+            { text: 'Load Balancer Down', color: '#ff9800', emoji: '⚖️', points: 210 },
+            { text: 'SaaS Unreachable', color: '#00bcd4', emoji: '💼', points: 180 }
+        ];
+
+        // User complaints that network engineers hear
+        const userComplaints = [
+            "My VPN is so slow!",
+            "Microsoft won't load again!",
+            "The network is broken!",
+            "Lumen had another outage!",
+            "Why is Teams not working?",
+            "I can't access the cloud!",
+            "AWS is down AGAIN?!",
+            "The internet is broken!",
+            "Salesforce won't open!",
+            "My Zoom call keeps dropping!",
+            "Why is everything so laggy?",
+            "I can't get to my files!",
+            "Office 365 is down!",
+            "Nothing is working!",
+            "The VPN keeps disconnecting!",
+            "Our website is unreachable!",
+            "Email isn't sending!",
+            "Azure is having issues!",
+            "DNS is failing again!",
+            "AT&T is having problems!",
+            "Verizon outage?!",
+            "Can't reach the database!",
+            "API is timing out!",
+            "SSL cert expired?!",
+            "BGP route issues!",
+            "Packet loss everywhere!",
+            "High latency to prod!",
+            "CDN is slow today!",
+            "Firewall blocking everything!",
+            "Load balancer went down!",
+            "Can't connect to VPN!",
+            "Network is crawling!",
+            "Google Cloud issues!",
+            "ISP having problems!",
+            "Our SaaS is unreachable!",
+            "Authentication failing!"
+        ];
+
+        // Paddle class
+        class Paddle {
+            constructor() {
+                this.width = 120;
+                this.height = 20;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - 40;
+                this.speed = 8;
+            }
+
+            draw() {
+                // ThousandEyes paddle with glow effect
+                ctx.save();
+                
+                // Glow
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#00d9ff';
+                
+                // Main paddle body
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+                gradient.addColorStop(0, '#00d9ff');
+                gradient.addColorStop(1, '#0099ff');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 10);
+                ctx.fill();
+                
+                // Eye symbol in center
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#000814';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#00d9ff';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            move() {
+                if (keys['ArrowLeft'] && this.x > 0) {
+                    this.x -= this.speed;
+                }
+                if (keys['ArrowRight'] && this.x < canvas.width - this.width) {
+                    this.x += this.speed;
+                }
+            }
+        }
+
+        // Ball class
+        class Ball {
+            constructor() {
+                this.radius = 8;
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 60;
+                this.dx = 0;
+                this.dy = 0;
+                this.speed = 5;
+            }
+
+            draw() {
+                // Glowing ball
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00fff7';
+                
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                gradient.addColorStop(0, '#00fff7');
+                gradient.addColorStop(1, '#00d9ff');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+
+            update() {
+                if (!ballLaunched) {
+                    // Stick to paddle
+                    this.x = paddle.x + paddle.width / 2;
+                    this.y = paddle.y - this.radius;
+                    return;
+                }
+
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Wall collisions
+                if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {
+                    this.dx = -this.dx;
+                    createImpactParticles(this.x, this.y, '#00d9ff');
+                }
+
+                if (this.y - this.radius < 0) {
+                    this.dy = -this.dy;
+                    createImpactParticles(this.x, this.y, '#00d9ff');
+                }
+
+                // Paddle collision
+                if (this.y + this.radius > paddle.y &&
+                    this.y - this.radius < paddle.y + paddle.height &&
+                    this.x > paddle.x &&
+                    this.x < paddle.x + paddle.width) {
+                    
+                    this.dy = -Math.abs(this.dy);
+                    
+                    // Angle based on where it hit the paddle
+                    const hitPos = (this.x - paddle.x) / paddle.width;
+                    this.dx = (hitPos - 0.5) * 8;
+                    
+                    createImpactParticles(this.x, this.y, '#00d9ff');
+                }
+
+                // Ball lost
+                if (this.y - this.radius > canvas.height) {
+                    lives--;
+                    combo = 0;
+                    updateUI();
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    } else {
+                        resetBall();
+                    }
+                }
+            }
+
+            launch() {
+                if (!ballLaunched) {
+                    ballLaunched = true;
+                    this.dx = (Math.random() - 0.5) * 4;
+                    this.dy = -this.speed;
+                }
+            }
+        }
+
+        // Brick class
+        class Brick {
+            constructor(x, y, problem) {
+                this.x = x;
+                this.y = y;
+                this.width = 85;
+                this.height = 35;
+                this.problem = problem;
+                this.visible = true;
+            }
+
+            draw() {
+                if (!this.visible) return;
+
+                ctx.save();
+                
+                // Brick shadow
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.problem.color;
+                
+                // Main brick
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+                gradient.addColorStop(0, this.problem.color);
+                gradient.addColorStop(1, this.shadeColor(this.problem.color, -40));
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 5);
+                ctx.fill();
+                
+                // Border
+                ctx.strokeStyle = this.shadeColor(this.problem.color, 40);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Emoji
+                ctx.shadowBlur = 0;
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.problem.emoji, this.x + this.width / 2, this.y + this.height / 2);
+                
+                ctx.restore();
+            }
+
+            shadeColor(color, percent) {
+                const num = parseInt(color.replace('#', ''), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = (num >> 16) + amt;
+                const G = (num >> 8 & 0x00FF) + amt;
+                const B = (num & 0x0000FF) + amt;
+                return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                    (B < 255 ? B < 1 ? 0 : B : 255))
+                    .toString(16).slice(1);
+            }
+        }
+
+        // Particle class
+        class Particle {
+            constructor(x, y, color, vx, vy) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.size = Math.random() * 4 + 2;
+                this.life = 1;
+                this.color = color;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 0;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // gravity
+                this.life -= 0.02;
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // Create explosion particles
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 30; i++) {
+                const angle = (Math.PI * 2 / 30) * i;
+                const speed = Math.random() * 5 + 2;
+                particles.push(new Particle(
+                    x, y, color,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed
+                ));
+            }
+        }
+
+        // Create impact particles
+        function createImpactParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push(new Particle(
+                    x, y, color,
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 4
+                ));
+            }
+        }
+
+        // Check ball-brick collision
+        function checkBrickCollisions() {
+            for (let brick of bricks) {
+                if (!brick.visible) continue;
+
+                if (ball.x + ball.radius > brick.x &&
+                    ball.x - ball.radius < brick.x + brick.width &&
+                    ball.y + ball.radius > brick.y &&
+                    ball.y - ball.radius < brick.y + brick.height) {
+                    
+                    brick.visible = false;
+                    combo++;
+                    maxCombo = Math.max(maxCombo, combo);
+                    
+                    const comboMultiplier = Math.min(combo, 10);
+                    score += brick.problem.points * comboMultiplier;
+                    
+                    createExplosion(brick.x + brick.width / 2, brick.y + brick.height / 2, brick.problem.color);
+                    
+                    // Show user complaint popup
+                    showComplaint(brick.x + brick.width / 2, brick.y + brick.height / 2);
+                    
+                    // Show combo
+                    if (combo > 1) {
+                        showCombo(combo);
+                    }
+                    
+                    // Bounce ball
+                    const ballCenter = { x: ball.x, y: ball.y };
+                    const brickCenter = { x: brick.x + brick.width / 2, y: brick.y + brick.height / 2 };
+                    
+                    if (Math.abs(ballCenter.x - brickCenter.x) > Math.abs(ballCenter.y - brickCenter.y)) {
+                        ball.dx = -ball.dx;
+                    } else {
+                        ball.dy = -ball.dy;
+                    }
+                    
+                    updateUI();
+                    
+                    // Check level complete
+                    if (bricks.every(b => !b.visible)) {
+                        levelComplete();
+                    }
+                    
+                    break;
+                }
+            }
+        }
+
+        // Show combo multiplier
+        function showCombo(comboCount) {
+            const comboDisplay = document.getElementById('comboDisplay');
+            comboDisplay.textContent = `${comboCount}x COMBO!`;
+            comboDisplay.style.opacity = '1';
+            comboDisplay.classList.add('pulse');
+            
+            setTimeout(() => {
+                comboDisplay.style.opacity = '0';
+                comboDisplay.classList.remove('pulse');
+            }, 1000);
+        }
+
+        // Show user complaint popup
+        function showComplaint(x, y) {
+            const complaint = userComplaints[Math.floor(Math.random() * userComplaints.length)];
+            const popup = document.createElement('div');
+            popup.className = 'complaint-popup';
+            popup.textContent = complaint;
+            
+            // Position relative to canvas
+            const canvasRect = canvas.getBoundingClientRect();
+            popup.style.left = (canvasRect.left + x) + 'px';
+            popup.style.top = (canvasRect.top + y) + 'px';
+            
+            document.body.appendChild(popup);
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                popup.remove();
+            }, 2000);
+        }
+
+        // Create bricks for current level
+        function createBricks() {
+            bricks = [];
+            const rows = Math.min(5 + level, 8);
+            const cols = 9;
+            const padding = 10;
+            const offsetX = 20;
+            const offsetY = 80;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = offsetX + col * (85 + padding);
+                    const y = offsetY + row * (35 + padding);
+                    const problem = networkProblems[Math.floor(Math.random() * networkProblems.length)];
+                    bricks.push(new Brick(x, y, problem));
+                }
+            }
+        }
+
+        // Reset ball
+        function resetBall() {
+            ballLaunched = false;
+            ball = new Ball();
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('score').textContent = score.toLocaleString();
+            document.getElementById('level').textContent = level;
+            document.getElementById('lives').textContent = '❤️'.repeat(lives);
+            document.getElementById('combo').textContent = combo + 'x';
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // Clear canvas with fade effect
+            ctx.fillStyle = 'rgba(0, 8, 20, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid background
+            ctx.strokeStyle = 'rgba(0, 217, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Update and draw game objects
+            paddle.move();
+            paddle.draw();
+
+            ball.update();
+            ball.draw();
+
+            // Draw bricks
+            for (let brick of bricks) {
+                brick.draw();
+            }
+
+            // Check collisions
+            checkBrickCollisions();
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize game
+        function initGame() {
+            paddle = new Paddle();
+            ball = new Ball();
+            particles = [];
+            ballLaunched = false;
+            combo = 0;
+            createBricks();
+            updateUI();
+        }
+
+        // Start game
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            score = 0;
+            lives = 3;
+            level = 1;
+            maxCombo = 0;
+            initGame();
+            gameActive = true;
+            gameLoop();
+        }
+
+        // Level complete
+        function levelComplete() {
+            gameActive = false;
+            document.getElementById('levelStats').innerHTML = `
+                <strong>Level ${level} Complete!</strong><br>
+                Score: ${score.toLocaleString()}<br>
+                Max Combo: ${maxCombo}x<br><br>
+                Network looking cleaner! 🎯
+            `;
+            document.getElementById('levelComplete').style.display = 'block';
+        }
+
+        // Next level
+        function nextLevel() {
+            document.getElementById('levelComplete').style.display = 'none';
+            level++;
+            combo = 0;
+            lives = Math.min(lives + 1, 5); // Bonus life
+            initGame();
+            gameActive = true;
+            gameLoop();
+        }
+
+        // Game over
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('finalScore').innerHTML = `
+                <strong>Final Score: ${score.toLocaleString()}</strong><br>
+                Levels Completed: ${level}<br>
+                Max Combo: ${maxCombo}x
+            `;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Restart game
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            startGame();
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            
+            if (e.key === ' ' && gameActive) {
+                e.preventDefault();
+                ball.launch();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Show start screen
+        window.addEventListener('load', () => {
+            document.getElementById('startScreen').style.display = 'block';
+        });
+
+        // Add roundRect polyfill
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+                this.moveTo(x + radius, y);
+                this.lineTo(x + width - radius, y);
+                this.quadraticCurveTo(x + width, y, x + width, y + radius);
+                this.lineTo(x + width, y + height - radius);
+                this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                this.lineTo(x + radius, y + height);
+                this.quadraticCurveTo(x, y + height, x, y + height - radius);
+                this.lineTo(x, y + radius);
+                this.quadraticCurveTo(x, y, x + radius, y);
+                this.closePath();
+            };
+        }
+    </script>
+</body>
+</html>
